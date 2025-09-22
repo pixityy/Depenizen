@@ -7,27 +7,25 @@ import com.denizenscript.denizen.objects.PlayerTag;
 import com.denizenscript.denizencore.objects.core.ElementTag;
 import com.denizenscript.denizencore.objects.ObjectTag;
 import com.denizenscript.denizencore.scripts.ScriptEntryData;
-import net.william278.husksync.event.DataSaveEvent;
+import net.william278.husksync.event.PreSyncEvent;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 
-public class PlayerDataSyncScriptEvent extends BukkitScriptEvent implements Listener {
+public class PlayerDataPreSyncScriptEvent extends BukkitScriptEvent implements Listener {
 
     // <--[event]
     // @Events
-    // player data syncs
-    // husksync player data syncs
-    // husksync player data saves
+    // player pre syncs data
+    // husksync player pre syncs data
+    // husksync player data pre loads
     //
     // @Location true
     //
     // @Cancellable true
     //
-    // @Triggers when a player's data is synchronized/saved with HuskSync.
+    // @Triggers when a player's data is about to be synchronized/loaded with HuskSync.
     //
     // @Context
-    // <context.save_cause> returns the cause of the data save. 
-    // Will be one of: 'DISCONNECT', 'WORLD_SAVE', 'SERVER_SHUTDOWN', 'API', 'LEGACY_MIGRATION', 'MPDB_MIGRATION'.
     // <context.user_uuid> returns the UUID of the user whose data is being synced.
     // <context.user_username> returns the username of the user whose data is being synced.
     //
@@ -39,15 +37,14 @@ public class PlayerDataSyncScriptEvent extends BukkitScriptEvent implements List
     //
     // -->
 
-    public PlayerDataSyncScriptEvent() {
-        registerCouldMatcher("player data syncs");
-        registerCouldMatcher("husksync player data syncs");
-        registerCouldMatcher("husksync player data saves");
+    public PlayerDataPreSyncScriptEvent() {
+        registerCouldMatcher("player pre syncs data");
+        registerCouldMatcher("husksync player pre syncs data");
+        registerCouldMatcher("husksync player data pre loads");
     }
 
-    public DataSaveEvent event;
+    public PreSyncEvent event;
     public PlayerTag player;
-    public String saveCause;
     public String userUUID;
     public String userName;
 
@@ -67,7 +64,6 @@ public class PlayerDataSyncScriptEvent extends BukkitScriptEvent implements List
     @Override
     public ObjectTag getContext(String name) {
         return switch (name) {
-            case "save_cause" -> new ElementTag(saveCause);
             case "user_uuid" -> new ElementTag(userUUID);
             case "user_username" -> new ElementTag(userName);
             default -> super.getContext(name);
@@ -75,7 +71,7 @@ public class PlayerDataSyncScriptEvent extends BukkitScriptEvent implements List
     }
 
     @EventHandler
-    public void onPlayerDataSync(DataSaveEvent event) {
+    public void onPlayerDataPreSync(PreSyncEvent event) {
         // Check if there's an associated player
         if (event.getUser().getPlayer().isEmpty()) {
             return;
@@ -87,7 +83,6 @@ public class PlayerDataSyncScriptEvent extends BukkitScriptEvent implements List
         }
         
         player = PlayerTag.mirrorBukkitPlayer(bukkitPlayer);
-        saveCause = event.getSaveCause().name();
         userUUID = event.getUser().getUuid().toString();
         userName = event.getUser().getUsername();
         this.event = event;

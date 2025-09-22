@@ -7,6 +7,7 @@ import com.denizenscript.denizencore.objects.core.TimeTag;
 import com.denizenscript.denizencore.objects.properties.Property;
 import com.denizenscript.denizencore.objects.Mechanism;
 import com.denizenscript.denizencore.tags.Attribute;
+import com.denizenscript.denizencore.utilities.debugging.Debug;
 import com.denizenscript.depenizen.bukkit.bridges.HuskSyncBridge;
 import net.william278.husksync.api.HuskSyncAPI;
 import net.william278.husksync.user.OnlineUser;
@@ -15,6 +16,7 @@ import net.william278.husksync.user.User;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 public class HuskSyncPlayerProperties implements Property {
 
@@ -47,7 +49,7 @@ public class HuskSyncPlayerProperties implements Property {
     }
 
     public static final String[] handledTags = new String[] {
-            "husksync_is_syncing", "husksync_last_sync", "husksync_user_exists"
+            "husksync_is_syncing", "husksync_user_exists"
     };
 
     public static final String[] handledMechs = new String[] {
@@ -65,6 +67,11 @@ public class HuskSyncPlayerProperties implements Property {
             return null;
         }
 
+        if (HuskSyncBridge.huskSyncAPI == null) {
+            Debug.echoError("HuskSync API not available");
+            return null;
+        }
+
         // <--[tag]
         // @attribute <PlayerTag.husksync_is_syncing>
         // @returns ElementTag(Boolean)
@@ -73,12 +80,17 @@ public class HuskSyncPlayerProperties implements Property {
         // Returns whether the player is currently syncing data.
         // -->
         if (attribute.startsWith("husksync_is_syncing")) {
-            Optional<OnlineUser> onlineUser = HuskSyncBridge.huskSyncAPI.getUser(player.getPlayerEntity());
-            if (onlineUser.isPresent()) {
-                return new ElementTag(HuskSyncBridge.huskSyncAPI.isLocked(onlineUser.get()))
-                        .getObjectAttribute(attribute.fulfill(1));
+            try {
+                Optional<OnlineUser> onlineUser = HuskSyncBridge.huskSyncAPI.getUser(player.getPlayerEntity());
+                if (onlineUser.isPresent()) {
+                    return new ElementTag(HuskSyncBridge.huskSyncAPI.isLocked(onlineUser.get()))
+                            .getObjectAttribute(attribute.fulfill(1));
+                }
+                return new ElementTag(false).getObjectAttribute(attribute.fulfill(1));
+            } catch (Exception e) {
+                Debug.echoError("Error checking HuskSync sync status: " + e.getMessage());
+                return new ElementTag(false).getObjectAttribute(attribute.fulfill(1));
             }
-            return new ElementTag(false).getObjectAttribute(attribute.fulfill(1));
         }
 
         // <--[tag]
@@ -92,35 +104,12 @@ public class HuskSyncPlayerProperties implements Property {
             UUID uuid = player.getUUID();
             try {
                 CompletableFuture<Optional<User>> userFuture = HuskSyncBridge.huskSyncAPI.getUser(uuid);
-                Optional<User> user = userFuture.get();
+                Optional<User> user = userFuture.get(5, TimeUnit.SECONDS); // Add timeout
                 return new ElementTag(user.isPresent()).getObjectAttribute(attribute.fulfill(1));
             } catch (Exception e) {
+                Debug.echoError("Error checking HuskSync user existence: " + e.getMessage());
                 return new ElementTag(false).getObjectAttribute(attribute.fulfill(1));
             }
-        }
-
-        // <--[tag]
-        // @attribute <PlayerTag.husksync_last_sync>
-        // @returns TimeTag
-        // @plugin Depenizen, HuskSync
-        // @description
-        // Returns the last time the player's data was synchronized, if available.
-        // Returns null if the player has never been synchronized.
-        // -->
-        if (attribute.startsWith("husksync_last_sync")) {
-            UUID uuid = player.getUUID();
-            try {
-                CompletableFuture<Optional<User>> userFuture = HuskSyncBridge.huskSyncAPI.getUser(uuid);
-                Optional<User> user = userFuture.get();
-                if (user.isPresent()) {
-                    // Note: This would need to be implemented based on actual HuskSync API
-                    // For now, return null as the exact method may vary by version
-                    return new TimeTag(System.currentTimeMillis()).getObjectAttribute(attribute.fulfill(1));
-                }
-            } catch (Exception e) {
-                // Handle errors gracefully
-            }
-            return new ElementTag("null").getObjectAttribute(attribute.fulfill(1));
         }
 
         return null;
