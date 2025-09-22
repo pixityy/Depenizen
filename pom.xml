@@ -178,6 +178,13 @@
             <systemPath>${basedir}/lib/GriefPrevention.jar</systemPath>
         </dependency>
         <dependency>
+            <groupId>net.william278</groupId>
+            <artifactId>HuskSync</artifactId>
+            <version>3.7.4</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/HuskSync.jar</systemPath>
+        </dependency>
+        <dependency>
             <groupId>com.gamingmesh</groupId>
             <artifactId>Jobs</artifactId>
             <version>5.0.3.0</version>
